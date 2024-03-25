@@ -1,0 +1,72 @@
+name: Deploy NuGet
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      Version: ${{ steps.gitversion.outputs.SemVer }}
+      CommitsSinceVersionSource: ${{ steps.gitversion.outputs.CommitsSinceVersionSource }} 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: GitVersion Install
+        uses: gittools/actions/gitversion/setup@v0.10.2
+        with:
+          versionSpec: 5.x
+
+      - name: Lookup Version
+        uses: gittools/actions/gitversion/execute@v0.10.2
+        id: gitversion
+
+      - name: Display Info
+        run: |
+          echo "Version: ${{ steps.gitversion.outputs.SemVer }}"
+          echo "CommitsSinceVersionSource: ${{ steps.gitversion.outputs.CommitsSinceVersionSource }}"
+
+      - name: Setup DotNet
+        uses: actions/setup-dotnet@v3.2.0
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Find csproj files
+        run: |
+          find . -type f -name '*.csproj' > projects.txt
+
+      - name: Build Projects
+        run: |
+          while IFS= read -r project; do
+            dotnet pack "$project" -p:Version='${{ steps.gitversion.outputs.SemVer }}' -c Release
+          done < projects.txt
+
+      - name: Upload NuGet Packages
+        uses: actions/upload-artifact@v3.1.3
+        with:
+          name: nugetPackages
+          path: '**/*.nupkg'
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/master' && needs.build.outputs.CommitsSinceVersionSource > 0
+
+    steps: 
+      - name: Download NuGet Packages Artifact
+        uses: actions/download-artifact@v3.0.2
+        with:
+          name: nugetPackages
+          path: nugetPackages
+
+      - name: Configure NuGet Source
+        run: |
+          echo "//nuget.pkg.github.com/${{ vars.PLASMA_USERNAME }}/index.json" > nuget.config
+          dotnet nuget add source --name github --username "${{ vars.PLASMA_USERNAME }}" --password "${{ secrets.PLASMA_DEPLOY_KEY }}" --configfile nuget.config
+          rm nuget.config
+
+      - name: Push Packages to GitHub Packages 
+        run: |
+          dotnet nuget push nugetPackages/*.nupkg --source github --api-key "${{ secrets.PLASMA_DEPLOY_KEY }}"
