@@ -19,10 +19,6 @@ jobs:
         with:
           versionSpec: 5.x
 
-      - name: Lookup Version
-        uses: gittools/actions/gitversion/execute@v0.10.2
-        id: gitversion
-
       - name: Display Info
         run: |
           echo "Version: ${{ steps.gitversion.outputs.SemVer }}"
