@@ -49,9 +49,10 @@ jobs:
 
       - name: Configure NuGet Source
         run: |
-          echo "//nuget.pkg.github.com/${{ vars.PLASMA_USERNAME }}/index.json" > nuget.config
-          dotnet nuget add source --name github --username "${{ vars.PLASMA_USERNAME }}" --password "${{ secrets.PLASMA_DEPLOY_KEY }}" --configfile nuget.config
+          echo "source=https://nuget.pkg.github.com/Plasma-Software/index.json" > nuget.config
+          dotnet nuget add source --name github --username ${{ secrets.PLASMA_USERNAME }} --password ${{ secrets.PLASMA_DEPLOY_KEY }} --configfile nuget.config
           rm nuget.config
+
 
       - name: Push Packages to GitHub Packages 
         run: |
