@@ -13,20 +13,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-        
-      - name: Install GitVersion
-        uses: gittools/actions/gitversion/setup@v0.10.2
-        with:
-          versionSpec: 5.x
-        
-      - name: Determine Version
-        uses: gittools/actions/gitversion/execute@v0.10.2
-        id: gitversion 
-      
-      - name: Display GitVersion outputs
-        run: |
-          echo "Version: ${{ steps.gitversion.outputs.SemVer }}"
-          echo "CommitsSinceVersionSource: ${{ steps.gitversion.outputs.CommitsSinceVersionSource }}"
 
 
       - name: Setup DotNet
@@ -41,7 +27,7 @@ jobs:
       - name: Build Projects
         run: |
           while IFS= read -r project; do
-            dotnet pack "$project" -p:Version='${{ steps.gitversion.outputs.SemVer }}' -c Release
+            dotnet pack "$project" -c Release
           done < projects.txt
 
       - name: Upload NuGet Packages
